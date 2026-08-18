@@ -12,26 +12,32 @@ import elevationRouter from './routes/elevation';
 import geographyRouter from './routes/geography';
 
 const app = express();
-const PORT = process.env.PORT || 4000;
+
+// Trust Vercel's proxy for rate limiting
+app.set('trust proxy', 1);
 
 app.use(express.json());
-app.set('trust proxy', 1);
 app.use(helmet());
 app.use(cors({
   origin: [
     'http://localhost:3000', 
-    'https://rail-gaadi-2j9i.vercel.app' // Replace with your actual live Next.js URL
+    'https://rail-gaadi-2j9i.vercel.app'
   ],
   credentials: true
 }));
 
-// Rate Limiting: 100 requests per 15 min window
+// Rate Limiting
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
   message: { error: 'Too many requests, please try again later.' },
 });
 app.use('/api/', limiter);
+
+// Root route to prevent 404 on base URL checks
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: 'RailGaadi Intelligence Backend API' });
+});
 
 // API Routes
 app.use('/api/trains', trainsRouter);
@@ -53,6 +59,13 @@ app.get('/health', (req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚆 RailGaadi Backend running at http://localhost:${PORT}`);
-});
+// Run server listener only in local development
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 4000;
+  app.listen(PORT, () => {
+    console.log(`🚆 RailGaadi Backend running at http://localhost:${PORT}`);
+  });
+}
+
+// CRITICAL FOR VERCEL: Export the express app
+export default app;
