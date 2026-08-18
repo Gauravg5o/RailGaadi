@@ -1,8 +1,23 @@
 {
-  "rewrites": [
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  
+  "crons": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "path": "/api/cron-job",
+      "schedule": "0 5 * * *"
     }
-  ]
+  ],
+
+  "functions": {
+    "app/api/heavy-task/route.ts": {
+      "memory": 1024,
+      "maxDuration": 60
+    },
+    "app/api/regional/**/*.ts": {
+      "region": ["iad1"]
+    }
+  },
+  
+  "buildCommand": "next build",
+  "installCommand": "npm install"
 }
