@@ -1,23 +1,19 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  
-  "crons": [
+  "version": 2,
+  "builds": [
     {
-      "path": "/api/cron-job",
-      "schedule": "0 5 * * *"
+      "src": "backend/index.js",
+      "use": "@vercel/node"
+    },
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
     }
   ],
-
-  "functions": {
-    "app/api/heavy-task/route.ts": {
-      "memory": 1024,
-      "maxDuration": 60
-    },
-    "app/api/regional/**/*.ts": {
-      "region": ["iad1"]
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "/backend/index.js"
     }
-  },
-  
-  "buildCommand": "next build",
-  "installCommand": "npm install"
+  ]
 }
