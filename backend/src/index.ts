@@ -14,9 +14,15 @@ import geographyRouter from './routes/geography';
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-app.use(helmet());
-app.use(cors({ origin: '*' }));
 app.use(express.json());
+app.use(helmet());
+app.use(cors({
+  origin: [
+    'http://localhost:3000', 
+    'https://rail-gaadi-2j9i.vercel.app' // Replace with your actual live Next.js URL
+  ],
+  credentials: true
+}));
 
 // Rate Limiting: 100 requests per 15 min window
 const limiter = rateLimit({
