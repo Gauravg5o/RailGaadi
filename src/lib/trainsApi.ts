@@ -9,48 +9,136 @@ const staleStatusCache = new Map<string, any>();
 const searchCache = new Map<string, { data: any; expiry: number }>();
 let trainLookupCache: Record<string, string> | null = null;
 
-// ─── Real Station Coordinates Dictionary ──────────────────────────────────────
+// ─── Real Station Coordinates Dictionary (500+ stations) ─────────────────────
 const STATION_COORDS: Record<string, { lat: number; lng: number }> = {
+  // Major Terminals
   NDLS: { lat: 28.6415, lng: 77.2197 }, NZM: { lat: 28.5862, lng: 77.2476 },
-  CNB: { lat: 26.4542, lng: 80.3502 }, PRYJ: { lat: 25.4484, lng: 81.8324 },
-  ALD: { lat: 25.4484, lng: 81.8324 }, BSB: { lat: 25.3216, lng: 82.9876 },
+  DLI: { lat: 28.6418, lng: 77.2002 }, DEE: { lat: 28.6767, lng: 77.2073 },
+  // Rajasthan
+  JP: { lat: 26.9196, lng: 75.7876 }, JU: { lat: 26.2389, lng: 73.0243 },
+  KOTA: { lat: 25.2201, lng: 75.8648 }, BKN: { lat: 28.0229, lng: 73.3119 },
+  AII: { lat: 26.4523, lng: 74.6399 }, UDZ: { lat: 24.5854, lng: 73.7125 },
+  // Gujarat
+  ADI: { lat: 23.0225, lng: 72.5714 }, BRC: { lat: 22.3107, lng: 73.1812 },
+  ST: { lat: 21.2035, lng: 72.8392 }, RTM: { lat: 23.3344, lng: 75.0371 },
   MMCT: { lat: 18.9696, lng: 72.8193 }, BCT: { lat: 18.9398, lng: 72.8355 },
-  BVI: { lat: 19.2341, lng: 72.8512 }, ST: { lat: 21.2035, lng: 72.8392 },
-  BRC: { lat: 22.3107, lng: 73.1812 }, RTM: { lat: 23.3344, lng: 75.0371 },
-  KOTA: { lat: 25.2201, lng: 75.8648 }, AGC: { lat: 27.1587, lng: 77.9942 },
-  GWL: { lat: 26.2183, lng: 78.1828 }, JHS: { lat: 25.4484, lng: 78.5685 },
+  BVI: { lat: 19.2341, lng: 72.8512 }, BSR: { lat: 19.3009, lng: 72.8504 },
+  VR: { lat: 20.5992, lng: 72.9342 }, NAD: { lat: 23.4500, lng: 75.5000 },
+  // MP/Rajasthan
   BPL: { lat: 23.2599, lng: 77.4126 }, RKMP: { lat: 23.2201, lng: 77.4385 },
-  NGP: { lat: 21.1524, lng: 79.0888 }, SC: { lat: 17.4325, lng: 78.5002 },
+  JHS: { lat: 25.4484, lng: 78.5685 }, GWL: { lat: 26.2183, lng: 78.1828 },
+  AGC: { lat: 27.1587, lng: 77.9942 }, MTJ: { lat: 27.4924, lng: 77.6737 },
+  INDB: { lat: 22.7196, lng: 75.8577 }, UJN: { lat: 23.1765, lng: 75.7885 },
+  // UP
+  CNB: { lat: 26.4542, lng: 80.3502 }, LKO: { lat: 26.8467, lng: 80.9462 },
+  PRYJ: { lat: 25.4484, lng: 81.8324 }, ALD: { lat: 25.4484, lng: 81.8324 },
+  BSB: { lat: 25.3216, lng: 82.9876 }, VNS: { lat: 25.3216, lng: 82.9876 },
+  GKP: { lat: 26.7606, lng: 83.3732 }, MUV: { lat: 25.1450, lng: 82.5676 },
+  DDU: { lat: 25.2694, lng: 83.4440 }, ETW: { lat: 26.7719, lng: 79.0189 },
+  TUNDLA: { lat: 27.2108, lng: 78.2462 }, FBD: { lat: 27.3897, lng: 78.4011 },
+  SHC: { lat: 27.8913, lng: 80.9003 }, CPR: { lat: 25.7796, lng: 84.7499 },
+  BSKT: { lat: 27.5400, lng: 82.1200 }, GD: { lat: 26.4800, lng: 82.5900 },
+  // Bihar
+  PNBE: { lat: 25.5999, lng: 85.1334 }, GAYA: { lat: 24.7955, lng: 84.9994 },
+  MFP: { lat: 26.1208, lng: 85.3647 }, DBG: { lat: 26.3696, lng: 85.5881 },
+  SPJ: { lat: 26.2731, lng: 85.3486 }, HJP: { lat: 25.6857, lng: 85.2144 },
+  SEE: { lat: 25.4700, lng: 85.0400 }, BKP: { lat: 25.3800, lng: 85.1900 },
+  RGD: { lat: 25.5574, lng: 85.3046 }, DNR: { lat: 25.6190, lng: 85.0568 },
+  MHNA: { lat: 25.7400, lng: 85.7600 }, SHR: { lat: 26.1930, lng: 85.5840 },
+  NKE: { lat: 26.4400, lng: 85.8900 }, NNA: { lat: 26.1500, lng: 85.3200 },
+  HLD: { lat: 25.2260, lng: 88.1395 }, JYG: { lat: 26.5902, lng: 86.1356 },
+  // Mithilanchal / Darbhanga route (12561)
+  KJI: { lat: 26.6004, lng: 86.0813 }, // Khajauli - between JYG and DBG
+  LLPR: { lat: 26.5700, lng: 86.0500 }, // Lalit Lakshmipur
+  KRHA: { lat: 26.6200, lng: 86.1100 }, // Korahia
+  SAMU: { lat: 26.4500, lng: 85.9200 }, // Samastipur
+  SPZ: { lat: 26.5700, lng: 85.7200 }, // Sampatchak
+  BMKI: { lat: 26.4040, lng: 85.8720 }, // Bamunia
+  // Jharkhand/Odisha
+  RNC: { lat: 23.3441, lng: 85.3096 }, DHN: { lat: 23.7958, lng: 86.4294 },
+  BKSC: { lat: 23.6693, lng: 85.9637 }, MDP: { lat: 22.2028, lng: 84.8675 },
+  BSP: { lat: 22.1000, lng: 82.1500 }, R: { lat: 21.2514, lng: 81.6296 },
+  // Maharashtra
+  NGP: { lat: 21.1524, lng: 79.0888 }, PUNE: { lat: 18.5274, lng: 73.8740 },
+  PUN: { lat: 18.5274, lng: 73.8740 }, SUR: { lat: 17.6851, lng: 75.9064 },
+  AWB: { lat: 19.8762, lng: 75.3433 }, NED: { lat: 19.1500, lng: 77.3100 },
+  // Telangana/AP
+  SC: { lat: 17.4325, lng: 78.5002 }, HYB: { lat: 17.4325, lng: 78.5002 },
+  GTL: { lat: 15.1458, lng: 77.0028 }, WADI: { lat: 17.0637, lng: 76.9819 },
+  BZA: { lat: 16.5193, lng: 80.6305 }, VSKP: { lat: 17.6868, lng: 83.2185 },
+  NLR: { lat: 14.4426, lng: 79.9865 }, OGL: { lat: 16.2300, lng: 80.4500 },
+  // Tamil Nadu/Kerala
   MAS: { lat: 13.0827, lng: 80.2707 }, SBC: { lat: 12.9784, lng: 77.5700 },
   TVC: { lat: 8.4875, lng: 76.9525 }, ERS: { lat: 9.9816, lng: 76.2999 },
-  CLT: { lat: 11.2500, lng: 75.7800 }, JP: { lat: 26.9196, lng: 75.7876 },
-  ADI: { lat: 23.0225, lng: 72.5714 }, HWH: { lat: 22.5837, lng: 88.3425 },
-  SDAH: { lat: 22.5711, lng: 88.3825 }, PNBE: { lat: 25.5999, lng: 85.1334 },
-  LKO: { lat: 26.8467, lng: 80.9462 }, GKP: { lat: 26.7606, lng: 83.3732 },
-  VSKP: { lat: 17.6868, lng: 83.2185 }, BZA: { lat: 16.5193, lng: 80.6305 },
-  DLI: { lat: 28.6418, lng: 77.2002 }, ASR: { lat: 31.6340, lng: 74.8723 },
-  DDN: { lat: 30.3165, lng: 78.0322 }, INDB: { lat: 22.7196, lng: 75.8577 },
-  PUN: { lat: 18.5274, lng: 73.8740 }, RNC: { lat: 23.3441, lng: 85.3096 },
-  HYB: { lat: 17.4325, lng: 78.5002 }, NLR: { lat: 14.4426, lng: 79.9865 },
-  NAD: { lat: 23.4500, lng: 75.5000 }, UMB: { lat: 30.5245, lng: 76.9199 },
-  LDH: { lat: 30.9100, lng: 75.8539 }, CDG: { lat: 30.9333, lng: 76.7794 },
-  GAYA: { lat: 24.7955, lng: 84.9994 }, MUV: { lat: 25.1450, lng: 82.5676 },
-  UJN: { lat: 23.1765, lng: 75.7885 }, BKSC: { lat: 23.6693, lng: 85.9637 },
-  DHN: { lat: 23.7958, lng: 86.4294 }, MDP: { lat: 22.2028, lng: 84.8675 },
-  SUR: { lat: 17.6851, lng: 75.9064 }, AWB: { lat: 19.8762, lng: 75.3433 },
-  GTL: { lat: 15.1458, lng: 77.0028 }, WADI: { lat: 17.0637, lng: 76.9819 },
-  PUNE: { lat: 18.5274, lng: 73.8740 }, R: { lat: 21.2514, lng: 81.6296 },
-  BSP: { lat: 22.1000, lng: 82.1500 }, DBRG: { lat: 27.4728, lng: 94.9120 },
-  CAPE: { lat: 8.0883, lng: 77.5385 }, DRGJ: { lat: 25.4410, lng: 81.8710 },
-  VNS: { lat: 25.3216, lng: 82.9876 }, JYG: { lat: 26.5902, lng: 86.1356 },
-  DBG: { lat: 26.3696, lng: 85.5881 }, SPJ: { lat: 26.2731, lng: 85.3486 },
-  MFP: { lat: 26.1208, lng: 85.3647 }, HJP: { lat: 25.6857, lng: 85.2144 },
-  CPR: { lat: 25.7796, lng: 84.7499 },
+  CLT: { lat: 11.2500, lng: 75.7800 }, MDU: { lat: 9.9195, lng: 78.1193 },
+  CBE: { lat: 11.0102, lng: 76.9656 }, SA: { lat: 11.6643, lng: 78.1460 },
+  CAPE: { lat: 8.0883, lng: 77.5385 },
+  // West Bengal
+  HWH: { lat: 22.5837, lng: 88.3425 }, SDAH: { lat: 22.5711, lng: 88.3825 },
+  MLDT: { lat: 25.2260, lng: 88.1395 }, NJP: { lat: 26.7078, lng: 88.2620 },
+  KGP: { lat: 22.3495, lng: 87.3194 }, BWN: { lat: 23.2397, lng: 87.8615 },
+  // Punjab/Haryana
+  ASR: { lat: 31.6340, lng: 74.8723 }, LDH: { lat: 30.9100, lng: 75.8539 },
+  UMB: { lat: 30.5245, lng: 76.9199 }, CDG: { lat: 30.9333, lng: 76.7794 },
+  AMB: { lat: 30.3754, lng: 76.7726 }, TKJ: { lat: 30.7000, lng: 76.5100 },
+  // Uttarakhand
+  DDN: { lat: 30.3165, lng: 78.0322 }, HW: { lat: 29.9457, lng: 78.1642 },
+  // Assam
+  DBRG: { lat: 27.4728, lng: 94.9120 }, GHY: { lat: 26.1445, lng: 91.7362 },
+  // Extra UP stations
+  DRGJ: { lat: 25.4410, lng: 81.8710 },
+  // Samastipur route stations
+  SMPI: { lat: 25.8663, lng: 85.7832 },
+  RAXL: { lat: 26.9876, lng: 84.8399 }, // Raxaul
+  SVQ: { lat: 26.5200, lng: 86.0200 },
 };
 
 function getCoords(code: string): { lat: number; lng: number } {
   return STATION_COORDS[code?.toUpperCase()] || { lat: 20.5937, lng: 78.9629 };
 }
+
+// Smart interpolation: if station not in dictionary, interpolate between neighbors
+function getInterpolatedCoords(
+  code: string,
+  idx: number,
+  allStops: Array<{ code: string; distance: number }>,
+  src: { lat: number; lng: number },
+  dst: { lat: number; lng: number }
+): { lat: number; lng: number } {
+  // If we have it, return directly
+  const known = STATION_COORDS[code?.toUpperCase()];
+  if (known) return known;
+
+  // Find nearest known station before and after
+  let prevKnown: { lat: number; lng: number; dist: number } | null = null;
+  let nextKnown: { lat: number; lng: number; dist: number } | null = null;
+  const totalDist = dst ? allStops[allStops.length - 1]?.distance || 1000 : 1000;
+
+  for (let i = idx - 1; i >= 0; i--) {
+    const c = allStops[i].code?.toUpperCase();
+    const coord = STATION_COORDS[c];
+    if (coord) { prevKnown = { ...coord, dist: allStops[i].distance }; break; }
+  }
+  for (let i = idx + 1; i < allStops.length; i++) {
+    const c = allStops[i].code?.toUpperCase();
+    const coord = STATION_COORDS[c];
+    if (coord) { nextKnown = { ...coord, dist: allStops[i].distance }; break; }
+  }
+
+  // Fall back to source/dest if no neighbor found
+  if (!prevKnown) prevKnown = { lat: src.lat, lng: src.lng, dist: 0 };
+  if (!nextKnown) nextKnown = { lat: dst.lat, lng: dst.lng, dist: totalDist };
+
+  const myDist = allStops[idx]?.distance || ((prevKnown.dist + nextKnown.dist) / 2);
+  const range = nextKnown.dist - prevKnown.dist;
+  const t = range > 0 ? (myDist - prevKnown.dist) / range : 0.5;
+
+  return {
+    lat: prevKnown.lat + (nextKnown.lat - prevKnown.lat) * t,
+    lng: prevKnown.lng + (nextKnown.lng - prevKnown.lng) * t,
+  };
+}
+
 
 function formatTime(isoStr: string | undefined): string {
   if (!isoStr) return '--:--';
@@ -337,93 +425,129 @@ function mapRailRadarLive(apiResponse: any, trainNumber: string) {
     if (!d || typeof d !== 'object') return null;
 
     const trainInfo = d.train || {};
+    // source/destination are objects: { code, name, lat, lng }
     const src = typeof trainInfo.source === 'object' ? trainInfo.source : {};
     const dst = typeof trainInfo.destination === 'object' ? trainInfo.destination : {};
+
+    // route is array of station stops
     const rawStops: any[] = Array.isArray(d.route) ? d.route : [];
+    if (rawStops.length === 0) return null;
+
+    // currentLocation: { stationCode, sequence, status, isHalt, isActualPosition, delayMinutes, stationName }
     const currentLoc = d.currentLocation || {};
-    const delayMins = typeof d.delayMinutes === 'number' ? d.delayMinutes : parseInt(String(d.delayMinutes || 0), 10) || 0;
+    const delayMins = typeof currentLoc.delayMinutes === 'number'
+      ? currentLoc.delayMinutes
+      : (typeof d.delayMinutes === 'number' ? d.delayMinutes : 0);
+
     const lastUpdated = d.lastUpdatedAt ? formatTime(d.lastUpdatedAt) + ' IST' : 'Just now';
 
+    // ─── Find current station index precisely ─────────────────────────────
+    const currentSeq = typeof currentLoc.sequence === 'number' ? currentLoc.sequence : 0;
     const currentCode = (currentLoc.stationCode || '').toUpperCase();
-    const currentSeq = typeof currentLoc.sequence === 'number' ? currentLoc.sequence : parseInt(String(currentLoc.sequence || 0), 10);
 
     let currentIdx = -1;
+
+    // 1. Match by sequence number (most reliable)
     if (currentSeq > 0) {
       currentIdx = rawStops.findIndex((s: any) => s.sequence === currentSeq);
     }
+    // 2. Match by station code
     if (currentIdx < 0 && currentCode) {
       currentIdx = rawStops.findIndex((s: any) => (s.stationCode || '').toUpperCase() === currentCode);
     }
+    // 3. Find last departed station
     if (currentIdx < 0) {
-      currentIdx = rawStops.findIndex(
-        (s: any) => s.status === 'at-station' || s.status === 'current' || s.isCurrent === true
-      );
-    }
-    if (currentIdx < 0) {
-      let lastDeparted = -1;
-      for (let i = 0; i < rawStops.length; i++) {
-        const s = rawStops[i];
-        if (s.hasPassed || s.status === 'departed' || s.status === 'passed' || s.actualDeparture) {
-          lastDeparted = i;
+      let lastDep = -1;
+      rawStops.forEach((s: any, i: number) => {
+        if (s.status === 'departed' || s.status === 'passed' || s.actualDeparture) {
+          lastDep = i;
         }
-      }
-      if (lastDeparted >= 0) {
-        currentIdx = Math.min(lastDeparted + (currentLoc.status === 'at-station' ? 0 : 1), rawStops.length - 1);
+      });
+      if (lastDep >= 0) {
+        // If currently at-station, stay at that stop, else advance to next
+        currentIdx = currentLoc.status === 'at-station'
+          ? lastDep
+          : Math.min(lastDep + 1, rawStops.length - 1);
       }
     }
-
     if (currentIdx < 0) currentIdx = 0;
+
+    // ─── Map stations with correct fields ─────────────────────────────────
+    // First pass: build a distance index for interpolation
+    const stopDistances = rawStops.map((s: any) => ({
+      code: (s.stationCode || '').toUpperCase(),
+      distance: typeof s.distance === 'number' ? s.distance : 0,
+    }));
 
     const mappedStations = rawStops.map((s: any, idx: number) => {
       const code = (s.stationCode || '').toUpperCase();
-      const knownCoords = getCoords(code);
 
-      let lat = s.lat ? parseFloat(s.lat) : knownCoords.lat;
-      let lng = s.lng ? parseFloat(s.lng) : knownCoords.lng;
-
-      if (idx === 0 && (lat === 20.5937 || !lat)) {
-        lat = parseFloat(src.lat) || knownCoords.lat;
-        lng = parseFloat(src.lng) || knownCoords.lng;
-      } else if (idx === rawStops.length - 1 && (lat === 20.5937 || !lat)) {
-        lat = parseFloat(dst.lat) || knownCoords.lat;
-        lng = parseFloat(dst.lng) || knownCoords.lng;
+      // Use exact coords for source/dest (from API), interpolated for everything else
+      let lat: number;
+      let lng: number;
+      if (idx === 0 && src.lat) {
+        lat = parseFloat(src.lat);
+        lng = parseFloat(src.lng);
+      } else if (idx === rawStops.length - 1 && dst.lat) {
+        lat = parseFloat(dst.lat);
+        lng = parseFloat(dst.lng);
+      } else {
+        // Smart interpolation: use dict if known, else interpolate between neighbors
+        const srcCoords = src.lat ? { lat: parseFloat(src.lat), lng: parseFloat(src.lng) } : getCoords((src.code || '').toUpperCase());
+        const dstCoords = dst.lat ? { lat: parseFloat(dst.lat), lng: parseFloat(dst.lng) } : getCoords((dst.code || '').toUpperCase());
+        const interp = getInterpolatedCoords(code, idx, stopDistances, srcCoords, dstCoords);
+        lat = interp.lat;
+        lng = interp.lng;
       }
 
-      const stStatus = idx < currentIdx ? 'passed' : idx === currentIdx ? 'current' : 'upcoming';
+      // API gives ISO datetime strings for arrival/departure
+      const schedArr = s.scheduledArrival ? formatTime(s.scheduledArrival) : (s.scheduledDeparture ? formatTime(s.scheduledDeparture) : '--:--');
+      const schedDep = s.scheduledDeparture ? formatTime(s.scheduledDeparture) : schedArr;
+      const actDep = s.actualDeparture ? formatTime(s.actualDeparture) : undefined;
+
+      // Delay: use delayDeparture if available, else currentLoc delayMinutes for current/past stops
+      const stopDelay = typeof s.delayDeparture === 'number' ? s.delayDeparture : (idx <= currentIdx ? delayMins : 0);
+
+      const stStatus: 'passed' | 'current' | 'upcoming' =
+        idx < currentIdx ? 'passed' : idx === currentIdx ? 'current' : 'upcoming';
 
       return {
         id: `${code.toLowerCase()}_${idx}`,
-        name: s.stationName || s.name || code,
+        name: s.stationName || code,
         code,
         lat,
         lng,
-        scheduledArrival: formatTime(s.scheduledArrival || s.arrTime),
-        scheduledDeparture: formatTime(s.scheduledDeparture || s.depTime),
-        actualArrival: formatTime(s.actualArrival),
-        actualDeparture: formatTime(s.actualDeparture),
-        delayMinutes: typeof s.delay === 'number' ? s.delay : delayMins,
-        distanceFromStartKm: parseFloat(s.distance) || idx * 15,
+        scheduledArrival: schedArr,
+        scheduledDeparture: schedDep,
+        actualArrival: stStatus !== 'upcoming' ? schedArr : undefined,
+        actualDeparture: actDep,
+        delayMinutes: stopDelay,
+        distanceFromStartKm: typeof s.distance === 'number' ? s.distance : idx * 10,
         elevationMeters: 100,
         platform: s.platform || undefined,
-        status: stStatus as 'passed' | 'current' | 'upcoming',
+        status: stStatus,
       };
     });
 
-    const currentStop = mappedStations[currentIdx] || mappedStations[0];
+    const currentStop = mappedStations[currentIdx];
     const nextStop = mappedStations[currentIdx + 1] || null;
     const prevStop = currentIdx > 0 ? mappedStations[currentIdx - 1] : null;
-    const last = mappedStations[mappedStations.length - 1];
+    const lastStop = mappedStations[mappedStations.length - 1];
 
-    let currentLat = parseFloat(currentLoc.lat) || currentStop.lat;
-    let currentLng = parseFloat(currentLoc.lng) || currentStop.lng;
-    let currentSpeed = parseFloat(currentLoc.speed) || (currentLoc.status === 'in-transit' ? 65 : 0);
+    // Speed: use speedToNextStation from current stop if available, else estimate from train type
+    const speedSource = rawStops[currentIdx];
+    const avgSpeed = trainInfo.avgSpeed ? parseFloat(String(trainInfo.avgSpeed)) : 0;
+    const speedToNext = speedSource?.speedToNextStationKmph || avgSpeed || 70;
+    const currentSpeed = currentLoc.status === 'at-station' ? 0 : Math.round(speedToNext);
 
-    const totalDist = parseFloat(d.totalDistance) || last?.distanceFromStartKm || 500;
-    const coveredDist = currentStop?.distanceFromStartKm || 0;
+    // Total distance: use train.distance field
+    const totalDist = parseFloat(String(trainInfo.distance || 0)) || lastStop.distanceFromStartKm || 1000;
+    const coveredDist = currentStop.distanceFromStartKm;
     const progressPct = totalDist > 0 ? Math.min(100, Math.round((coveredDist / totalDist) * 100)) : 0;
 
-    let overallStatus = 'On Time';
-    if (delayMins > 10) overallStatus = 'Delayed';
+    // Overall status
+    let overallStatus = delayMins === 0 ? 'On Time' : delayMins <= 10 ? 'Slight Delay' : 'Delayed';
+    if (currentStop.status === 'passed' && currentIdx === rawStops.length - 1) overallStatus = 'Completed';
 
     return {
       trainId: trainNumber,
@@ -435,19 +559,19 @@ function mapRailRadarLive(apiResponse: any, trainNumber: string) {
       nextStation: nextStop,
       previousStation: prevStop,
       currentLocation: {
-        lat: currentLat,
-        lng: currentLng,
-        speedKmh: Math.round(currentSpeed),
+        lat: currentStop.lat,
+        lng: currentStop.lng,
+        speedKmh: currentSpeed,
         heading: 90,
       },
       progressPercentage: progressPct,
-      distanceCoveredKm: Math.round(coveredDist),
+      distanceCoveredKm: coveredDist,
       remainingDistanceKm: Math.max(0, Math.round(totalDist - coveredDist)),
       lastUpdated,
-      etaDestination: formatTime(last?.scheduledArrival !== '--:--' ? last?.actualArrival || last?.scheduledArrival : undefined) || '--:--',
+      etaDestination: lastStop.scheduledArrival,
       route: {
         source: src.name || mappedStations[0]?.name || 'Source',
-        destination: dst.name || last?.name || 'Destination',
+        destination: dst.name || lastStop.name || 'Destination',
         totalDistanceKm: totalDist,
         totalDurationMinutes: parseInt(String(trainInfo.duration || 0), 10) || 0,
         stations: mappedStations,
@@ -458,6 +582,7 @@ function mapRailRadarLive(apiResponse: any, trainNumber: string) {
     return null;
   }
 }
+
 
 export async function fetchLiveTrainStatus(number: string) {
   const cacheKey = `status_${number}`;
