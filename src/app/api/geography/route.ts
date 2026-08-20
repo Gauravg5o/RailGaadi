@@ -1,15 +1,68 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-const BACKEND = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+const KNOWN_POIS: Record<string, any[]> = {
+  NDLS: [
+    { id: 'poi-ndls-1', name: 'Yamuna River', type: 'river', distanceKm: 4.8, lat: 28.6512, lng: 77.2612, description: 'Major holy river flowing through the heart of the capital region.' },
+    { id: 'poi-ndls-2', name: 'Old Yamuna Bridge (Lohe ka Pul)', type: 'bridge', distanceKm: 5.2, lat: 28.6621, lng: 77.2645, description: 'Historic double-decker railway bridge built in 1866.' },
+    { id: 'poi-ndls-3', name: 'Red Fort (Lal Qila)', type: 'attraction', distanceKm: 3.1, lat: 28.6562, lng: 77.2410, description: 'UNESCO World Heritage Mughal fortress.' },
+  ],
+  MMCT: [
+    { id: 'poi-mmct-1', name: 'Arabian Sea Coastline', type: 'river', distanceKm: 2.1, lat: 18.9620, lng: 72.8120, description: 'Scenic coastal shoreline along Marine Drive.' },
+    { id: 'poi-mmct-2', name: 'Bandra-Worli Sea Link', type: 'bridge', distanceKm: 6.5, lat: 19.0330, lng: 72.8170, description: 'Iconic cable-stayed bridge spanning Mahim Bay.' },
+    { id: 'poi-mmct-3', name: 'Haji Ali Dargah', type: 'attraction', distanceKm: 2.8, lat: 18.9827, lng: 72.8089, description: 'Historic mosque located on an islet off the coast.' },
+  ],
+  HWH: [
+    { id: 'poi-hwh-1', name: 'Hooghly River', type: 'river', distanceKm: 0.5, lat: 22.5840, lng: 88.3450, description: 'Distributary of the Ganges River.' },
+    { id: 'poi-hwh-2', name: 'Howrah Bridge (Rabindra Setu)', type: 'bridge', distanceKm: 0.8, lat: 22.5851, lng: 88.3468, description: 'World-famous balanced cantilever bridge.' },
+    { id: 'poi-hwh-3', name: 'Vidyasagar Setu', type: 'bridge', distanceKm: 3.2, lat: 22.5580, lng: 88.3280, description: 'Toll cable-stayed bridge across Hooghly.' },
+  ],
+  PRYJ: [
+    { id: 'poi-pryj-1', name: 'Triveni Sangam', type: 'river', distanceKm: 6.2, lat: 25.4286, lng: 81.8829, description: 'Sacred confluence of rivers Ganga, Yamuna & Saraswati.' },
+    { id: 'poi-pryj-2', name: 'New Yamuna Bridge', type: 'bridge', distanceKm: 3.4, lat: 25.4385, lng: 81.8542, description: 'Cable-stayed bridge spanning the Yamuna River.' },
+    { id: 'poi-pryj-3', name: 'Allahabad Fort', type: 'attraction', distanceKm: 5.1, lat: 25.4312, lng: 81.8745, description: 'Historic 16th century Mughal fort built by Emperor Akbar.' },
+  ],
+};
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams.toString();
-  const url = `${BACKEND}/api/geography${searchParams ? `?${searchParams}` : ''}`;
-  try {
-    const res = await fetch(url, { cache: 'no-store' });
-    const data = await res.json();
-    return NextResponse.json(data);
-  } catch (error: any) {
-    return NextResponse.json([], { status: 503 });
+  const searchParams = request.nextUrl.searchParams;
+  const stationCode = (searchParams.get('code') || 'STN').toUpperCase();
+  const stationName = (searchParams.get('name') || stationCode).trim();
+  const lat = parseFloat(searchParams.get('lat') || '20.5937');
+  const lng = parseFloat(searchParams.get('lon') || searchParams.get('lng') || '78.9629');
+
+  if (KNOWN_POIS[stationCode]) {
+    return NextResponse.json(KNOWN_POIS[stationCode]);
   }
+
+  const generatedPOIs = [
+    {
+      id: `poi-${stationCode.toLowerCase()}-1`,
+      name: `${stationName} Regional River & Valley`,
+      type: 'river',
+      distanceKm: 4.2,
+      lat: lat + 0.02,
+      lng: lng + 0.03,
+      description: `Local river ecosystem and drainage basin near ${stationName}.`,
+    },
+    {
+      id: `poi-${stationCode.toLowerCase()}-2`,
+      name: `${stationName} Railway Viaduct & Crossing`,
+      type: 'bridge',
+      distanceKm: 2.8,
+      lat: lat - 0.015,
+      lng: lng + 0.02,
+      description: `Major structural railway bridge and grade separation near ${stationName}.`,
+    },
+    {
+      id: `poi-${stationCode.toLowerCase()}-3`,
+      name: `Historic ${stationName} Central Marker`,
+      type: 'attraction',
+      distanceKm: 3.5,
+      lat: lat + 0.01,
+      lng: lng - 0.02,
+      description: `Prominent landmark and town center near ${stationName} junction.`,
+    },
+  ];
+
+  return NextResponse.json(generatedPOIs);
 }

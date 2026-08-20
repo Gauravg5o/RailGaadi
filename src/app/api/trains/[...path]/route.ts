@@ -1,35 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-// Use server-side env var (not NEXT_PUBLIC_) so it's never exposed to browser
-const BACKEND = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000';
+import { fetchLiveTrainStatus, searchTrainsBackend } from '@/lib/trainsApi';
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ path: string[] }> }
 ) {
   const resolvedParams = await params;
-  const path = resolvedParams.path.join('/');
-  const searchParams = request.nextUrl.searchParams.toString();
-  const url = `${BACKEND}/api/trains/${path}${searchParams ? `?${searchParams}` : ''}`;
+  const pathParts = resolvedParams.path;
+  const searchParams = request.nextUrl.searchParams;
 
   try {
-    const res = await fetch(url, {
-      headers: { 'Accept': 'application/json' },
-      cache: 'no-store',
-    });
-
-    if (!res.ok) {
-      console.error(`[trains proxy] Backend error ${res.status} for ${url}`);
-      return NextResponse.json({ error: `Backend returned ${res.status}` }, { status: res.status });
+    // 1. Search endpoint: /api/trains/search?q=...
+    if (pathParts[0] === 'search') {
+      const q = searchParams.get('q') || '';
+      const results = await searchTrainsBackend(q);
+      return NextResponse.json(results);
     }
 
-    const data = await res.json();
-    return NextResponse.json(data);
+    // 2. Train endpoints: /api/trains/:number/status or /api/trains/:number/info
+    if (pathParts.length >= 2) {
+      const trainNumber = pathParts[0];
+      const action = pathParts[1];
+
+      if (action === 'status' || action === 'info') {
+        const liveData = await fetchLiveTrainStatus(trainNumber);
+        if (liveData) {
+          return NextResponse.json(liveData);
+        }
+      }
+    }
+
+    // Fallback if path matched single train number: /api/trains/:number
+    if (pathParts.length === 1 && /^\d{4,5}$/.test(pathParts[0])) {
+      const liveData = await fetchLiveTrainStatus(pathParts[0]);
+      if (liveData) {
+        return NextResponse.json(liveData);
+      }
+    }
+
+    return NextResponse.json({ error: 'Endpoint not found' }, { status: 404 });
   } catch (error: any) {
-    console.error(`[trains proxy] Connection error for ${url}:`, error.message);
-    return NextResponse.json(
-      { error: 'Backend unreachable. Make sure backend server is running on port 4000.' },
-      { status: 503 }
-    );
+    console.error(`[api/trains Error]:`, error);
+    return NextResponse.json({ error: 'Server error processing request' }, { status: 500 });
   }
 }
