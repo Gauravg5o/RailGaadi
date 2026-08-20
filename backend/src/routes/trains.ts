@@ -748,6 +748,7 @@ router.get('/:number/status', async (req: Request, res: Response) => {
   if (REAL_TRAIN_SCHEDULES[number]) {
     const liveFromSchedule = calculateLiveStatusFromSchedule(number, REAL_TRAIN_SCHEDULES[number]);
     statusCache.set(cacheKey, liveFromSchedule);
+    staleStatusCache.set(cacheKey, liveFromSchedule);
     return res.json(liveFromSchedule);
   }
 
