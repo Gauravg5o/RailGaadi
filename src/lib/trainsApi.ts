@@ -1,4 +1,4 @@
-import axios from 'axios';
+// No axios — use native fetch (works in all environments including Vercel serverless)
 
 const RAILRADAR_BASE = 'https://api.railradar.in/v1';
 const RAILRADAR_KEY = process.env.RAILRADAR_API_KEY || 'rg_744341e6c1b74d7eae831a2dd7904c3b';
@@ -470,37 +470,53 @@ export async function fetchLiveTrainStatus(number: string) {
 
   // 1. Fetch live status from RailRadar API
   try {
-    const res = await axios.get(`${RAILRADAR_BASE}/trains/${number}/live`, {
-      headers: { Authorization: `Bearer ${RAILRADAR_KEY}` },
-      timeout: 6000,
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const res = await fetch(`${RAILRADAR_BASE}/trains/${number}/live`, {
+      headers: { Authorization: `Bearer ${RAILRADAR_KEY}`, 'Accept': 'application/json' },
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
 
-    if (res.data?.success) {
-      const mapped = mapRailRadarLive(res.data, number);
-      if (mapped && mapped.route.stations.length > 0) {
-        statusCache.set(cacheKey, { data: mapped, expiry: nowTime + 90000 });
-        staleStatusCache.set(cacheKey, mapped);
-        return mapped;
+    if (res.ok) {
+      const json = await res.json();
+      if (json?.success) {
+        const mapped = mapRailRadarLive(json, number);
+        if (mapped && mapped.route.stations.length > 0) {
+          statusCache.set(cacheKey, { data: mapped, expiry: nowTime + 90000 });
+          staleStatusCache.set(cacheKey, mapped);
+          return mapped;
+        }
       }
     }
-  } catch (err: any) {}
+  } catch (err: any) {
+    console.log(`[trainsApi] RailRadar attempt 1 failed for ${number}:`, err.message);
+  }
 
   // 2. Try haltsOnly option
   try {
-    const res = await axios.get(`${RAILRADAR_BASE}/trains/${number}/live?haltsOnly=true`, {
-      headers: { Authorization: `Bearer ${RAILRADAR_KEY}` },
-      timeout: 6000,
+    const controller2 = new AbortController();
+    const timeoutId2 = setTimeout(() => controller2.abort(), 6000);
+    const res2 = await fetch(`${RAILRADAR_BASE}/trains/${number}/live?haltsOnly=true`, {
+      headers: { Authorization: `Bearer ${RAILRADAR_KEY}`, 'Accept': 'application/json' },
+      signal: controller2.signal,
     });
+    clearTimeout(timeoutId2);
 
-    if (res.data?.success) {
-      const mapped = mapRailRadarLive(res.data, number);
-      if (mapped && mapped.route.stations.length > 0) {
-        statusCache.set(cacheKey, { data: mapped, expiry: nowTime + 90000 });
-        staleStatusCache.set(cacheKey, mapped);
-        return mapped;
+    if (res2.ok) {
+      const json2 = await res2.json();
+      if (json2?.success) {
+        const mapped = mapRailRadarLive(json2, number);
+        if (mapped && mapped.route.stations.length > 0) {
+          statusCache.set(cacheKey, { data: mapped, expiry: nowTime + 90000 });
+          staleStatusCache.set(cacheKey, mapped);
+          return mapped;
+        }
       }
     }
-  } catch (err) {}
+  } catch (err) {
+    console.log(`[trainsApi] RailRadar attempt 2 failed for ${number}`);
+  }
 
   // 3. Stale cache
   if (staleStatusCache.has(cacheKey)) {
