@@ -1,4 +1,5 @@
 // No axios — use native fetch (works in all environments including Vercel serverless)
+import { ingestFromLiveStatus } from '@/lib/delayStore';
 
 const RAILRADAR_BASE = 'https://api.railradar.in/v1';
 const RAILRADAR_KEY = process.env.RAILRADAR_API_KEY || 'rg_744341e6c1b74d7eae831a2dd7904c3b';
@@ -608,6 +609,8 @@ export async function fetchLiveTrainStatus(number: string) {
       if (json?.success) {
         const mapped = mapRailRadarLive(json, number);
         if (mapped && mapped.route.stations.length > 0) {
+          // Phase 1 — persist delay observation (real RailRadar data only)
+          ingestFromLiveStatus(mapped);
           statusCache.set(cacheKey, { data: mapped, expiry: nowTime + 90000 });
           staleStatusCache.set(cacheKey, mapped);
           return mapped;
@@ -633,6 +636,8 @@ export async function fetchLiveTrainStatus(number: string) {
       if (json2?.success) {
         const mapped = mapRailRadarLive(json2, number);
         if (mapped && mapped.route.stations.length > 0) {
+          // Phase 1 — persist delay observation (real RailRadar data only)
+          ingestFromLiveStatus(mapped);
           statusCache.set(cacheKey, { data: mapped, expiry: nowTime + 90000 });
           staleStatusCache.set(cacheKey, mapped);
           return mapped;
