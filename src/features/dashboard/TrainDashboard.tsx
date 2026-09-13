@@ -6,6 +6,7 @@ import { getTrainByNumber, getLiveStatus } from '@/services/trainService';
 import { getWeatherForStation } from '@/services/weatherService';
 import { getNearbyGeography } from '@/services/geographyService';
 import { getElevationProfile } from '@/services/elevationService';
+import { getDelayForecast } from '@/services/delayForecastService';
 import { useUIStore } from '@/store/uiStore';
 import { usePreferencesStore } from '@/store/preferencesStore';
 import dynamic from 'next/dynamic';
@@ -14,6 +15,7 @@ import GlassCard from '@/components/ui/GlassCard';
 import MetricCard from '@/components/ui/MetricCard';
 import SkeletonLoader from '@/components/ui/SkeletonLoader';
 import ShareModal from '@/components/ui/ShareModal';
+import DelayForecastCard from '@/features/dashboard/DelayForecastCard';
 import { Station, Train } from '@/types';
 
 const AnalyticsView = dynamic(() => import('@/features/analytics/AnalyticsView'), {
@@ -160,6 +162,17 @@ export default function TrainDashboard({ trainNumber }: TrainDashboardProps) {
     queryKey: ['elevation', trainNumber],
     queryFn: () => getElevationProfile(trainNumber, train?.route?.stations || []),
     enabled: !!train?.route?.stations?.length,
+  });
+
+  // Delay Forecast Query (Phase 4 — Delay Intelligence Engine)
+  // Polls every 3 minutes — matches the server-side prediction cache TTL.
+  // Enabled as soon as liveStatus is available; silently degrades on error.
+  const { data: delayForecast, isLoading: isForecastLoading } = useQuery({
+    queryKey: ['delayForecast', trainNumber],
+    queryFn: () => getDelayForecast(trainNumber),
+    refetchInterval: 3 * 60 * 1000, // 3 minutes
+    enabled: !!liveStatus,
+    retry: 1,
   });
 
   // Countdown Timer for Auto Refresh
@@ -445,6 +458,12 @@ export default function TrainDashboard({ trainNumber }: TrainDashboardProps) {
               </p>
             </GlassCard>
           </div>
+
+          {/* Delay Forecast Card — Delay Intelligence Engine */}
+          <DelayForecastCard
+            forecast={delayForecast}
+            isLoading={isForecastLoading && !delayForecast}
+          />
 
           {/* Interactive Map Preview */}
           <div>
