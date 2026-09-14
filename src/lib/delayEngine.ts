@@ -239,22 +239,29 @@ export function computeDelayPrediction(
   const totalCount  = allObs.length;
 
   // ── Step 2: Cold-start guard ──────────────────────────────────────────────
-  // Need at least 2 recent points to fit a line (1 point has infinite slopes)
+  // Need at least 2 recent points to fit a line (1 point has infinite slopes).
+  // However we still return a projection = currentDelayMinutes (the most
+  // conservative valid estimate: delay stays the same to destination).
+  // This keeps the UI always showing a real number rather than going blank.
   if (recentCount < 2) {
+    const coldNote =
+      currentDelayMinutes === 0
+        ? 'Train is currently on time. Conservative estimate: on time at destination. Trend tracking starts once 2+ stations are observed.'
+        : `Current delay is ${currentDelayMinutes} min. Conservative estimate: delay maintained to destination. Trend tracking starts once 2+ stations are observed.`;
+
     return {
       trainId,
       currentDelayMinutes,
-      projectedDelayMinutes: null,
+      // Best estimate with no trend data = current delay persists unchanged.
+      // slope = 0 → projected = current + 0 × remaining = current.
+      projectedDelayMinutes: currentDelayMinutes,
       trendDirection: 'stable',
       trendSlopePerStation: 0,
       confidence: 'none',
       recentObservationCount: recentCount,
       totalObservationCount: totalCount,
-      basisDescription: buildBasisDescription('none', recentCount, totalCount),
-      trendNote:
-        recentCount === 0
-          ? 'No observations recorded for this train yet. Data builds up automatically as the train is polled.'
-          : 'Only 1 observation so far — need at least 2 stations to compute a trend.',
+      basisDescription: 'No trend data yet — showing conservative estimate (current delay maintained).',
+      trendNote: coldNote,
       computedAt: nowMs,
     };
   }

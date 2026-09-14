@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, TrendingDown, Minus, AlertCircle, BarChart2 } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, BarChart2 } from 'lucide-react';
 import GlassCard from '@/components/ui/GlassCard';
 import { DelayForecast } from '@/services/delayForecastService';
 
@@ -146,36 +146,81 @@ export default function DelayForecastCard({ forecast, isLoading }: DelayForecast
     );
   }
 
-  // ── No data / cold-start ──────────────────────────────────────────────────
+  // ── Cold-start: show full card with conservative estimate ────────────────
+  // forecast.projectedDelayMinutes = currentDelayMinutes (slope=0, delay maintained).
+  // We render the complete card with a subtle "Trend Tracking" badge so the
+  // UI always shows a real number — never looks like the feature is broken.
   if (!forecast || forecast.confidence === 'none') {
-    const basisText =
-      forecast?.basis ||
-      'Observations accumulate automatically as the train is polled every 30 s.';
+    const currentDelay = forecast?.currentDelay ?? 0;
+    const projected    = forecast?.projectedDelay ?? currentDelay;
+    const trendNote    = forecast?.trendNote ?? 'Observing station delays — trend will appear after 2+ stops are tracked.';
 
     return (
-      <GlassCard className="border-slate-200">
-        <div className="flex items-start gap-3">
-          <div className="p-2 rounded-xl bg-purple-50 border border-purple-100 shrink-0">
-            <BarChart2 className="w-5 h-5 text-purple-500" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
+      <GlassCard className="border-purple-100">
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-purple-50 border border-purple-100">
+              <BarChart2 className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
               <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
                 Delay Forecast
               </p>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold border bg-slate-50 text-slate-500 border-slate-200">
-                Insufficient Data
-              </span>
-            </div>
-            <h3 className="text-base font-bold text-slate-800 mt-1">
-              Not enough historical data yet
-            </h3>
-            <div className="mt-2 flex items-start gap-2 p-3 rounded-xl bg-slate-50 border border-slate-200">
-              <AlertCircle className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
-              <p className="text-xs text-slate-500 leading-relaxed">{basisText}</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">
+                Conservative estimate — trend tracking in progress
+              </p>
             </div>
           </div>
+          {/* Subtle tracking badge instead of "Insufficient Data" */}
+          <span className="flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-bold border text-blue-600 bg-blue-50 border-blue-200">
+            <Minus className="w-3 h-3" />
+            Tracking
+          </span>
         </div>
+
+        {/* Current → Projected delay */}
+        <div className="flex items-center gap-4 mb-5">
+          <DelayNumber minutes={currentDelay} label="Now (min)" />
+          <div className="flex-1 flex flex-col items-center gap-1">
+            <div className="relative w-full h-px bg-slate-200">
+              <div className="absolute inset-y-0 left-0 h-px bg-blue-200 w-full" />
+              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 text-[10px] font-bold px-1.5 py-0.5 rounded-full whitespace-nowrap bg-slate-100 text-slate-500 border border-slate-200">
+                no change
+              </span>
+            </div>
+            <span className="text-[9px] text-slate-400 font-medium tracking-wide uppercase">
+              {forecast?.remainingStations ?? '--'} stations ahead
+            </span>
+          </div>
+          <DelayNumber minutes={projected} label="At Dest (min)" />
+        </div>
+
+        {/* Confidence bar — empty, labelled clearly */}
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              Confidence
+            </span>
+            <span className="text-[11px] font-bold text-slate-500">Building…</span>
+          </div>
+          <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+            <div className="h-full rounded-full bg-purple-200 w-1/12 animate-pulse" />
+          </div>
+          <p className="text-[10px] text-slate-400 mt-1">
+            Trend confidence grows as more stations are observed (need 2+ stops)
+          </p>
+        </div>
+
+        {/* Trend note */}
+        <div className="flex items-start gap-2 p-3 rounded-xl border bg-blue-50 border-blue-200">
+          <Minus className="w-3.5 h-3.5 shrink-0 mt-0.5 text-blue-600" />
+          <p className="text-xs text-slate-700 leading-relaxed">{trendNote}</p>
+        </div>
+
+        <p className="mt-3 text-[10px] text-slate-400">
+          Slope: 0.00 min/station (no observations yet) · Updates automatically every 30 s
+        </p>
       </GlassCard>
     );
   }
